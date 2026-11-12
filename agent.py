@@ -8,6 +8,8 @@ from collections import deque
 
 import numpy as np
 import tensorflow as tf
+import torch
+import torch.nn as nn
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Conv2D, Dense, Flatten, Input, Softmax
 from tensorflow.keras.optimizers import Adam, RMSprop
@@ -19,7 +21,7 @@ from replay_buffer import ReplayBufferNumpy
 
 
 def huber_loss(y_true, y_pred, delta=1):
-    """Keras implementation for huber loss
+    """PyTorch implementation for huber loss
     loss = {
         0.5 * (y_true - y_pred)**2 if abs(y_true - y_pred) < delta
         delta * (abs(y_true - y_pred) - 0.5 * delta) otherwise
@@ -39,10 +41,10 @@ def huber_loss(y_true, y_pred, delta=1):
         loss values for all points
     """
     error = y_true - y_pred
-    quad_error = 0.5 * tf.math.square(error)
-    lin_error = delta * (tf.math.abs(error) - 0.5 * delta)
+    quad_error = 0.5 * torch.square(error)
+    lin_error = delta * (torch.abs(error) - 0.5 * delta)
     # quadratic error, linear error
-    return tf.where(tf.math.abs(error) < delta, quad_error, lin_error)
+    return torch.where(torch.abs(error) < delta, quad_error, lin_error)
 
 
 def mean_huber_loss(y_true, y_pred, delta=1):
