@@ -6,7 +6,6 @@ import pickle
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from model_config.model_17_1 import DQNModel
 from replay_buffer import ReplayBufferNumpy
@@ -307,6 +306,9 @@ class DeepQLearningAgent(Agent):
         # check if gpu is available, if not use cpu
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Same optimizer as in keras
+        self._optimizer = torch.optim.RMSprop(self._model.parameters(), lr=0.0005, alpha=0.9, eps=1e-7)
+
     def reset_models(self):
         """Reset all the models by creating new graphs"""
         self._model = self._agent_model()
@@ -324,13 +326,17 @@ class DeepQLearningAgent(Agent):
 
         Returns
         -------
-        board : Numpy array
-            Processed and normalized board
+        board : Tensor
+            The processed board state, ready for model input
         """
         if board.ndim == 3:
             board = board.reshape((1,) + self._input_shape)
-        board = self._normalize_board(board.copy())
-        return board.copy()
+        board = self._normalize_board(board)
+
+        # convert to (batch, frames, board_size, board_size) for pytorch
+        board = np.ascontiguousarray(board.transpose(0, 3, 1, 2))
+
+        return torch.from_numpy(board).to(self._device)
 
     def _get_model_outputs(self, board, model=None):
         """Get action values from the DQN model
@@ -339,8 +345,8 @@ class DeepQLearningAgent(Agent):
         ----------
         board : Numpy array
             The board state for which to predict action values
-        model : TensorFlow Graph, optional
-            The graph to use for prediction, model or target network
+        model : PyTorch Model, optional
+            The model to use for prediction, model or target network
 
         Returns
         -------
@@ -353,8 +359,8 @@ class DeepQLearningAgent(Agent):
         # the default model to use
         if model is None:
             model = self._model
-        model_outputs = model.predict_on_batch(board)
-        return model_outputs
+        model_outputs = model(board)
+        return model_outputs.cpu().numpy()
 
     def _normalize_board(self, board):
         """Normalize the board before input to the network
@@ -397,20 +403,21 @@ class DeepQLearningAgent(Agent):
 
         Returns
         -------
-        model : TensorFlow Graph
-            DQN model graph
+        model : PyTorch Model
+            DQN model
         """
         model = DQNModel(board_size=self._board_size, frames=self._n_frames, n_actions=self._n_actions)
         return model
 
     def set_weights_trainable(self):
         """Set selected layers to non trainable and compile the model"""
-        for layer in self._model.layers:
-            layer.trainable = False
-        # the last dense layers should be trainable
-        for s in ["action_prev_dense", "action_values"]:
-            self._model.get_layer(s).trainable = True
-        self._model.compile(optimizer=self._model.optimizer, loss=self._model.loss)
+        for p in self._model.parameters():
+            # set all layers to non trainable
+            p.requires_grad = False
+        # set the last two layers to trainable
+        for s in ["fc1", "action_values"]:
+            for p in getattr(self._model, s).parameters():
+                p.requires_grad = True
 
     def get_action_proba(self, board, values=None):
         """Returns the action probability values using the DQN model
@@ -453,9 +460,9 @@ class DeepQLearningAgent(Agent):
             assert isinstance(iteration, int), "iteration should be an integer"
         else:
             iteration = 0
-        self._model.save_weights("{}/model_{:04d}.h5".format(file_path, iteration))
+        torch.save(self._model.state_dict(), "{}/model_{:04d}.pt".format(file_path, iteration))
         if self._use_target_net:
-            self._target_net.save_weights("{}/model_{:04d}_target.h5".format(file_path, iteration))
+            torch.save(self._target_net.state_dict(), "{}/model_{:04d}_target.pt".format(file_path, iteration))
 
     def load_model(self, file_path="", iteration=None):
         """load any existing models, if available"""
@@ -479,18 +486,28 @@ class DeepQLearningAgent(Agent):
             assert isinstance(iteration, int), "iteration should be an integer"
         else:
             iteration = 0
-        self._model.load_weights("{}/model_{:04d}.h5".format(file_path, iteration))
+        self._model.load_state_dict(
+            torch.load(
+                "{}/model_{:04d}.pt".format(file_path, iteration),
+                map_location=self._device,
+            )
+        )
         if self._use_target_net:
-            self._target_net.load_weights("{}/model_{:04d}_target.h5".format(file_path, iteration))
+            self._target_net.load_state_dict(
+                torch.load(
+                    "{}/model_{:04d}_target.pt".format(file_path, iteration),
+                    map_location=self._device,
+                )
+            )
         # print("Couldn't locate models at {}, check provided path".format(file_path))
 
     def print_models(self):
         """Print the current models using summary method"""
         print("Training Model")
-        print(self._model.summary())
+        print(self._model)
         if self._use_target_net:
             print("Target Network")
-            print(self._target_net.summary())
+            print(self._target_net)
 
     def train_agent(self, batch_size=32, num_games=1, reward_clip=False):
         """Train the model by sampling from buffer and return the error.
@@ -535,10 +552,14 @@ class DeepQLearningAgent(Agent):
         target = self._get_model_outputs(s)
         # we bother only with the difference in reward estimate at the selected action
         target = (1 - a) * target + a * discounted_reward
-        # fit
-        loss = self._model.train_on_batch(self._normalize_board(s), target)
-        # loss = round(loss, 5)
-        return loss
+        target = torch.as_tensor(target, dtype=torch.float32, device=self._device)
+        # one step of gradient descent (equivalent of keras train_on_batch)
+        self._model.train()
+        self._optimizer.zero_grad()
+        loss = mean_huber_loss(target, self._model(self._prepare_input(s)))
+        loss.backward()
+        self._optimizer.step()
+        return loss.item()
 
     def update_target_net(self):
         """Update the weights of the target network, which is kept
@@ -546,22 +567,22 @@ class DeepQLearningAgent(Agent):
         This should not be updated very frequently
         """
         if self._use_target_net:
-            self._target_net.set_weights(self._model.get_weights())
+            self._target_net.load_state_dict(self._model.state_dict())
 
     def compare_weights(self):
         """Simple utility function to heck if the model and target
         network have the same weights or not
         """
-        for i in range(len(self._model.layers)):
-            for j in range(len(self._model.layers[i].weights)):
-                c = (self._model.layers[i].weights[j].numpy() == self._target_net.layers[i].weights[j].numpy()).all()
-                print("Layer {:d} Weights {:d} Match : {:d}".format(i, j, int(c)))
+        target_state = self._target_net.state_dict()
+        for name, w in self._model.state_dict().items():
+            c = torch.equal(w, target_state[name])
+            print("Layer {:s} Match : {:d}".format(name, int(c)))
 
     def copy_weights_from_agent(self, agent_for_copy):
         """Update weights between competing agents which can be used
         in parallel training
         """
-        assert isinstance(agent_for_copy, self), "Agent type is required for copy"
+        assert isinstance(agent_for_copy, DeepQLearningAgent), "Agent type is required for copy"
 
-        self._model.set_weights(agent_for_copy._model.get_weights())
-        self._target_net.set_weights(agent_for_copy._model_pred.get_weights())
+        self._model.load_state_dict(agent_for_copy._model.state_dict())
+        self._target_net.load_state_dict(agent_for_copy._target_net.state_dict())
