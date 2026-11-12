@@ -1,12 +1,14 @@
 # some utility functions for the project
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-import matplotlib.animation as animation
-import numpy as np
-import time
-import pandas as pd
 import sys
+import time
+
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.patches import Rectangle
+from tqdm import tqdm
+
 
 def calculate_discounted_rewards(rewards, discount_factor=0.99):
     """Utility to calculate rewards discounted for

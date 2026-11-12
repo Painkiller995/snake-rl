@@ -1,5 +1,5 @@
-from game_environment_parallel import Snake
 import numpy as np
+from game_environment_parallel import Snake
 
 env = Snake(board_size=10, frames=2, n_games=3)
 s = env.reset()

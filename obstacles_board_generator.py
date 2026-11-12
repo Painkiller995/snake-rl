@@ -27,9 +27,10 @@ total_obstacles : int
     enough possibilities
 """
 
-import numpy as np
 import pickle
 import time
+
+import numpy as np
 from tqdm import tqdm
 
 board_size = 10

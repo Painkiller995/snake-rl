@@ -1,12 +1,20 @@
 # script to visualize how agent plays a game
 # useful to study different iterations
 
+import json
+
 import numpy as np
-from agent import DeepQLearningAgent, PolicyGradientAgent, \
-        AdvantageActorCriticAgent, HamiltonianCycleAgent, BreadthFirstSearchAgent
+
+from agent import (
+    AdvantageActorCriticAgent,
+    BreadthFirstSearchAgent,
+    DeepQLearningAgent,
+    HamiltonianCycleAgent,
+    PolicyGradientAgent,
+)
 from game_environment import Snake, SnakeNumpy
 from utils import visualize_game
-import json
+
 # import keras.backend as K
 
 # some global variables

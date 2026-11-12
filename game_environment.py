@@ -7,11 +7,13 @@ Important to manually reset the environment by user after initialization.
 The board borders are different from board color
 """
 
-import numpy as np
-from collections import deque
-import matplotlib.pyplot as plt
 import pickle
+from collections import deque
+
+import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
+
 
 class Position:
     """Class for defining any position on a 2D grid

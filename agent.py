@@ -1,19 +1,21 @@
 """
 store all the agents here
 """
-from replay_buffer import ReplayBuffer, ReplayBufferNumpy
-import numpy as np
-import time
-import pickle
-from collections import deque
 import json
+import pickle
+import time
+from collections import deque
+
+import numpy as np
 import tensorflow as tf
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.optimizers import RMSprop, SGD, Adam
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Input, Conv2D, Flatten, Dense, Softmax, MaxPool2D
 from tensorflow.keras import Model
+from tensorflow.keras.layers import Conv2D, Dense, Flatten, Input, MaxPool2D, Softmax
+from tensorflow.keras.optimizers import SGD, Adam, RMSprop
 from tensorflow.keras.regularizers import l2
+
+from replay_buffer import ReplayBuffer, ReplayBufferNumpy
+
 # from tensorflow.keras.losses import Huber
 
 def huber_loss(y_true, y_pred, delta=1):

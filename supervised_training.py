@@ -2,18 +2,21 @@
 script for training the agent for snake using various methods
 '''
 # run on cpu
+import json
 import os
+
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import sys
-import numpy as np
-from tqdm import tqdm
-from collections import deque
-import pandas as pd
 import time
-from utils import play_game2
-from game_environment import SnakeNumpy
+from collections import deque
+
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+
 from agent import BreadthFirstSearchAgent, SupervisedLearningAgent
-import json
+from game_environment import SnakeNumpy
+from utils import play_game2
 
 # some global variables
 version = 'v15.5'

@@ -1,5 +1,7 @@
-import numpy as np
 from collections import deque
+
+import numpy as np
+
 
 class ReplayBuffer:
     """This class stores the replay buffer from which data can be sampled for

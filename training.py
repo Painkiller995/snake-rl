@@ -2,20 +2,20 @@
 script for training the agent for snake using various methods
 '''
 # run on cpu
-import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-import numpy as np
-from tqdm import tqdm
-from collections import deque
-import pandas as pd
-import time
-from utils import play_game, play_game2
-from game_environment import Snake, SnakeNumpy
-import tensorflow as tf
-from agent import DeepQLearningAgent, PolicyGradientAgent,\
-                AdvantageActorCriticAgent, mean_huber_loss
 import json
+import os
+import time
+from collections import deque
+
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tqdm import tqdm
+
+from agent import AdvantageActorCriticAgent, DeepQLearningAgent, PolicyGradientAgent, mean_huber_loss
+from game_environment import Snake, SnakeNumpy
+from utils import play_game, play_game2
 
 # some global variables
 tf.random.set_seed(42)
