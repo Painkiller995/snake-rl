@@ -27,6 +27,7 @@ total_obstacles : int
     enough possibilities
 """
 
+import os
 import pickle
 import time
 
@@ -34,7 +35,7 @@ import numpy as np
 
 board_size = 10
 version = "v17.1"
-total_boards = 40
+total_boards = 40000
 track_index = 1000
 set_seed = True
 total_obstacles = 8
@@ -180,6 +181,8 @@ print(
         index, hrs, mins, secs, msecs
     )
 )
+
+os.makedirs("models/{:s}".format(version), exist_ok=True)
 
 with open("models/{:s}/obstacles_board".format(version), "wb") as f:
     pickle.dump(1 - obstacles_board[:index, :, :], f)
