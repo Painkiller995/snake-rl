@@ -291,6 +291,9 @@ class DeepQLearningAgent(Agent):
         except use_target_net is by default True and we call and additional
         reset models method to initialize the DQN networks
         """
+        # check if gpu is available, if not use cpu
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         Agent.__init__(
             self,
             board_size=board_size,
@@ -302,9 +305,6 @@ class DeepQLearningAgent(Agent):
             version=version,
         )
         self.reset_models()
-
-        # check if gpu is available, if not use cpu
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Same optimizer as in keras
         self._optimizer = torch.optim.RMSprop(self._model.parameters(), lr=0.0005, alpha=0.9, eps=1e-7)
@@ -359,7 +359,10 @@ class DeepQLearningAgent(Agent):
         # the default model to use
         if model is None:
             model = self._model
-        model_outputs = model(board)
+
+        # Fix: RuntimeError: Can't call numpy() on Tensor that requires grad.
+        with torch.no_grad():
+            model_outputs = model(board)
         return model_outputs.cpu().numpy()
 
     def _normalize_board(self, board):
@@ -407,7 +410,7 @@ class DeepQLearningAgent(Agent):
             DQN model
         """
         model = DQNModel(board_size=self._board_size, frames=self._n_frames, n_actions=self._n_actions)
-        return model
+        return model.to(self._device)
 
     def set_weights_trainable(self):
         """Set selected layers to non trainable and compile the model"""

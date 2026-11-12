@@ -111,7 +111,11 @@ env2 = SnakeNumpy(
     version=version,
 )
 
+# ----------------------------------------------------------------
+# create the directories for saving models and logs
 os.makedirs("models/{:s}".format(version), exist_ok=True)
+os.makedirs("model_logs", exist_ok=True)
+# ---------------------------------------------------------------
 
 # training loop
 model_logs = {"iteration": [], "reward_mean": [], "length_mean": [], "games": [], "loss": []}
