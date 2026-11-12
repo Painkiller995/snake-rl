@@ -2,19 +2,13 @@
 store all the agents here
 """
 
-import json
 import pickle
-from collections import deque
 
 import numpy as np
-import tensorflow as tf
 import torch
 import torch.nn as nn
-from tensorflow.keras import Model
-from tensorflow.keras.layers import Conv2D, Dense, Flatten, Input, Softmax
-from tensorflow.keras.optimizers import Adam, RMSprop
-from tensorflow.keras.regularizers import l2
 
+from model_config.model_17_1 import DQNModel
 from replay_buffer import ReplayBufferNumpy
 
 # from tensorflow.keras.losses import Huber
@@ -310,6 +304,9 @@ class DeepQLearningAgent(Agent):
         )
         self.reset_models()
 
+        # check if gpu is available, if not use cpu
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def reset_models(self):
         """Reset all the models by creating new graphs"""
         self._model = self._agent_model()
@@ -403,48 +400,7 @@ class DeepQLearningAgent(Agent):
         model : TensorFlow Graph
             DQN model graph
         """
-        # define the input layer, shape is dependent on the board size and frames
-        with open("model_config/{:s}.json".format(self._version), "r") as f:
-            m = json.loads(f.read())
-
-        input_board = Input(
-            (
-                self._board_size,
-                self._board_size,
-                self._n_frames,
-            ),
-            name="input",
-        )
-        x = input_board
-        for layer in m["model"]:
-            l = m["model"][layer]
-            if "Conv2D" in layer:
-                # add convolutional layer
-                x = Conv2D(**l)(x)
-            if "Flatten" in layer:
-                x = Flatten()(x)
-            if "Dense" in layer:
-                x = Dense(**l)(x)
-        out = Dense(self._n_actions, activation="linear", name="action_values")(x)
-        model = Model(inputs=input_board, outputs=out)
-        model.compile(optimizer=RMSprop(0.0005), loss=mean_huber_loss)
-
-        """
-        input_board = Input((self._board_size, self._board_size, self._n_frames,), name='input')
-        x = Conv2D(16, (3,3), activation='relu', data_format='channels_last')(input_board)
-        x = Conv2D(32, (3,3), activation='relu', data_format='channels_last')(x)
-        x = Conv2D(64, (6,6), activation='relu', data_format='channels_last')(x)
-        x = Flatten()(x)
-        x = Dense(64, activation = 'relu', name='action_prev_dense')(x)
-        # this layer contains the final output values, activation is linear since
-        # the loss used is huber or mse
-        out = Dense(self._n_actions, activation='linear', name='action_values')(x)
-        # compile the model
-        model = Model(inputs=input_board, outputs=out)
-        model.compile(optimizer=RMSprop(0.0005), loss=mean_huber_loss)
-        # model.compile(optimizer=RMSprop(0.0005), loss='mean_squared_error')
-        """
-
+        model = DQNModel(board_size=self._board_size, frames=self._n_frames, n_actions=self._n_actions)
         return model
 
     def set_weights_trainable(self):
