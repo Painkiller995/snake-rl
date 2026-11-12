@@ -64,7 +64,7 @@ def mean_huber_loss(y_true, y_pred, delta=1):
     loss : Tensor
         average loss across points
     """
-    return tf.reduce_mean(huber_loss(y_true, y_pred, delta))
+    return torch.mean(huber_loss(y_true, y_pred, delta))
 
 
 class Agent:
