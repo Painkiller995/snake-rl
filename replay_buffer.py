@@ -17,6 +17,7 @@ class ReplayBuffer:
     _n_actions : int
         Not used here
     """
+
     def __init__(self, buffer_size=1000, board_size=6, frames=2, actions=4):
         """Initializes the buffer with given size
 
@@ -31,13 +32,13 @@ class ReplayBuffer:
         actions : int, optional
             Not used here
         """
-        self._buffer = deque(maxlen = buffer_size)
+        self._buffer = deque(maxlen=buffer_size)
         self._buffer_size = buffer_size
         self._n_actions = actions
 
     def add_to_buffer(self, s, a, r, next_s, done):
         """Add data to the buffer
-        
+
         Parameters
         ----------
         s : Numpy array
@@ -67,7 +68,7 @@ class ReplayBuffer:
 
     def sample(self, size=1000, replace=False, shuffle=False):
         """Sample data from buffer and return in easily ingestible form
-        returned data has already been reshaped for direct use in the 
+        returned data has already been reshaped for direct use in the
         training routine
 
         Parameters
@@ -98,12 +99,11 @@ class ReplayBuffer:
         size = min(size, buffer_size)
         # since deque can only be traversed once, calculate the indices
         # of the deque to take as sample
-        sample_data_idx = set(np.random.choice(range(buffer_size), \
-                                    size=size, replace=replace))
+        sample_data_idx = set(np.random.choice(range(buffer_size), size=size, replace=replace))
         # sample size will be <= buffer size, hence traverse queue once
         sample_data = [val for index, val in enumerate(self._buffer) if index in sample_data_idx]
-        
-        if(shuffle):
+
+        if shuffle:
             np.random.shuffle(sample_data)
         # prepare the data in the required formats
         s, a1, r, next_s, done = [], [], [], [], []
@@ -124,20 +124,21 @@ class ReplayBuffer:
 
         return s, a, r, next_s, done
 
+
 class ReplayBufferNumpy:
     """This class stores the replay buffer from which data can be sampled for
     training the model for reinforcement learning. Numpy array is used as the
-    buffer in this case as it is easier to add multiple steps at once, and 
+    buffer in this case as it is easier to add multiple steps at once, and
     sampling is also faster. This is best utilised when using the Numpy array
     based game env
 
     Attributes
     ----------
     _s : Numpy array
-        Buffer for storing the current states, 
+        Buffer for storing the current states,
         buffer size * board size * board size * frames
     _next_s : Numpy array
-        Buffer for storing the next states, 
+        Buffer for storing the next states,
         buffer size * board size * board size * frames
     _a : Numpy array
         Buffer to store the actions, buffer size * 1
@@ -159,6 +160,7 @@ class ReplayBufferNumpy:
     _n_actions : int
         Available actions in the env
     """
+
     def __init__(self, buffer_size=1000, board_size=6, frames=2, actions=4):
         """Initializes the buffer with given size and also sets attributes
 
@@ -187,7 +189,7 @@ class ReplayBufferNumpy:
 
     def add_to_buffer(self, s, a, r, next_s, done, legal_moves):
         """Add data to the buffer, multiple examples can be added at once
-        
+
         Parameters
         ----------
         s : Numpy array
@@ -204,14 +206,14 @@ class ReplayBufferNumpy:
         legal_moves : Numpy array
             Binary indicator for legal moves in the next state
         """
-        if(s.ndim == 3):
+        if s.ndim == 3:
             # single board is supplied
             l = 1
         else:
             # multiple data points to be added
             l = s.shape[0]
         # % is to wrap over the buffer
-        idx = np.arange(self._pos, self._pos+l)%self._buffer_size
+        idx = np.arange(self._pos, self._pos + l) % self._buffer_size
         self._s[idx] = s
         self._a[idx] = a
         self._r[idx] = r
@@ -219,9 +221,9 @@ class ReplayBufferNumpy:
         self._done[idx] = done
         self._legal_moves[idx] = legal_moves
         # % is to wrap over the buffer
-        self._pos = (self._pos+l)%self._buffer_size
+        self._pos = (self._pos + l) % self._buffer_size
         # update the buffer size
-        self._current_buffer_size = max(self._current_buffer_size, self._pos+1)
+        self._current_buffer_size = max(self._current_buffer_size, self._pos + 1)
 
     def get_current_size(self):
         """Returns current buffer size, not to be confused with
@@ -236,7 +238,7 @@ class ReplayBufferNumpy:
 
     def sample(self, size=1000, replace=False, shuffle=False):
         """Sample data from buffer and return in easily ingestible form
-        returned data has already been reshaped for direct use in the 
+        returned data has already been reshaped for direct use in the
         training routine
 
         Parameters
@@ -266,13 +268,12 @@ class ReplayBufferNumpy:
         """
         size = min(size, self._current_buffer_size)
         # select random indexes indicating which examples to sample
-        idx = np.random.choice(np.arange(self._current_buffer_size), \
-                                    size=size, replace=replace)
+        idx = np.random.choice(np.arange(self._current_buffer_size), size=size, replace=replace)
 
         s = self._s[idx]
         # one hot encoding of actions
-        a = np.zeros((idx.shape[0],self._n_actions))
-        a[np.arange(idx.shape[0]),self._a[idx]] = 1
+        a = np.zeros((idx.shape[0], self._n_actions))
+        a[np.arange(idx.shape[0]), self._a[idx]] = 1
         r = self._r[idx].reshape((-1, 1))
         next_s = self._next_s[idx]
         done = self._done[idx].reshape(-1, 1)
