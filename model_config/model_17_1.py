@@ -2,6 +2,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Same values used in the Json
+config = {
+    "version": "v17.1",
+    "board_size": 10,
+    "frames": 2,
+    "max_time_limit": 998,
+    "supervised": 0,
+    "n_actions": 4,
+    "obstacles": 1,
+    "buffer_size": 80000,
+}
+
 
 class DQNModel(nn.Module):
     """
