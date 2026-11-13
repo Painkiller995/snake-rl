@@ -119,6 +119,10 @@ os.makedirs("model_logs", exist_ok=True)
 
 # training loop
 model_logs = {"iteration": [], "reward_mean": [], "length_mean": [], "games": [], "loss": []}
+# best evaluation score seen so far
+best_reward = -float("inf")
+# iteration of the currently saved best model
+best_iteration = None
 for index in tqdm(range(episodes)):
     # make small changes to the buffer and slowly train
     _, _, _ = play_game2(
@@ -161,9 +165,17 @@ for index in tqdm(range(episodes)):
             "model_logs/{:s}.csv".format(version), index=False
         )
 
-    # copy weights to target network and save models
+    # copy weights to target network and save the model only if it is the best so far
     if (index + 1) % log_frequency == 0:
         agent.update_target_net()
-        agent.save_model(file_path="models/{:s}".format(version), iteration=(index + 1))
+        if model_logs["reward_mean"][-1] > best_reward:
+            # delete the old best model
+            if best_iteration is not None:
+                os.remove("models/{:s}/model_{:04d}.pt".format(version, best_iteration))
+                os.remove("models/{:s}/model_{:04d}_target.pt".format(version, best_iteration))
+            # save the new best model
+            best_reward = model_logs["reward_mean"][-1]
+            best_iteration = index + 1
+            agent.save_model(file_path="models/{:s}".format(version), iteration=best_iteration)
         # keep some epsilon alive for training
         epsilon = max(epsilon * decay, epsilon_end)
