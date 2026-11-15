@@ -9,7 +9,7 @@ from utils import visualize_game
 
 version = config["version"]
 
-iteration_list = [163500]
+iteration_list = [139500]
 max_time_limit = 398
 
 # setup the environment
@@ -39,7 +39,7 @@ for iteration in iteration_list:
         visualize_game(
             env,
             agent,
-            path="images/game_visual_{:s}_{:d}_14_ob_{:d}.mp4".format(version, iteration, i),
+            path="images/game_visual_{:s}_{:d}_{:d}.gif".format(version, iteration, i),
             debug=False,
             animate=True,
             fps=12,
