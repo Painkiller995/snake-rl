@@ -328,7 +328,10 @@ def visualize_game(env, agent, path="images/game_visual.png", debug=False, anima
             fargs=(axs, color_map, food_count, qvalues),
         )
         # anim.save(path, writer='imagemagick', fps=5) # too much memory intensive
-        anim.save(path, writer=animation.writers["ffmpeg"](fps=fps, metadata=dict(artist="Me"), bitrate=1800))
+        if path.endswith(".gif"):
+            anim.save(path, writer=animation.PillowWriter(fps=fps))
+        else:
+            anim.save(path, writer=animation.writers["ffmpeg"](fps=fps, metadata=dict(artist="Me"), bitrate=1800))
     else:
         ncols = 5
         nrows = len(game_images) // ncols + (1 if len(game_images) % ncols > 0 else 0)
