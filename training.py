@@ -65,8 +65,9 @@ if supervised:
     except FileNotFoundError:
         pass
 else:
-    # setup the environment
+    # Number of games to play to fill the buffer with random actions
     games = 512
+    # Env to fill the buffer with random actions
     env = SnakeNumpy(
         board_size=board_size,
         frames=frames,
@@ -92,6 +93,7 @@ else:
 
     print("Playing {:d} frames took {:.2f}s".format(games * 64, time.time() - ct))
 
+# The training environment
 env = SnakeNumpy(
     board_size=board_size,
     frames=frames,
@@ -101,6 +103,8 @@ env = SnakeNumpy(
     obstacles=obstacles,
     version=version,
 )
+
+# The evaluation environment
 env2 = SnakeNumpy(
     board_size=board_size,
     frames=frames,
@@ -123,6 +127,8 @@ model_logs = {"iteration": [], "reward_mean": [], "length_mean": [], "games": []
 best_reward = -float("inf")
 # iteration of the currently saved best model
 best_iteration = None
+
+# 200k * 128 = 25.6M Snake moves
 for index in tqdm(range(episodes)):
     # make small changes to the buffer and slowly train
     _, _, _ = play_game2(
@@ -138,6 +144,7 @@ for index in tqdm(range(episodes)):
         total_frames=n_games_training,
         stateful=True,
     )
+
     loss = agent.train_agent(batch_size=64, num_games=n_games_training, reward_clip=True)
 
     # check performance every once in a while

@@ -307,6 +307,10 @@ class DeepQLearningAgent(Agent):
         self.reset_models()
 
         # Same optimizer as in keras
+        # Root mean square propagation, with learning rate 0.0005, decay 0.9 and epsilon 1e-7
+        # Maintain a moving average of the square of gradients and divide the gradient by the square root of this average.
+        # This way, the learning rate is adapted to the parameters, performing larger updates for infrequent and smaller updates for frequent parameters.
+        # Causing a stabilization of the learning process and faster convergence.
         self._optimizer = torch.optim.RMSprop(self._model.parameters(), lr=0.0005, alpha=0.9, eps=1e-7)
 
     def reset_models(self):
@@ -542,26 +546,63 @@ class DeepQLearningAgent(Agent):
             The current error (error metric is defined in reset_models)
         """
         s, a, r, next_s, done, legal_moves = self._buffer.sample(batch_size)
+
+        # We do that to keep the reward values in a small range, this is important for convergence
+        # This helps in stabilizing the training process
         if reward_clip:
             r = np.sign(r)
+
         # calculate the discounted reward, and then train accordingly
         current_model = self._target_net if self._use_target_net else self._model
+
         next_model_outputs = self._get_model_outputs(next_s, current_model)
-        # our estimate of expexted future discounted reward
+
+        # our estimate of expected future discounted reward
+
+        # Choose the best leagal move
+        # illegal moves are set to -inf, so they will never be chosen
+        # np.where(legal_moves == 1, next_model_outputs, -np.inf)
+        # Choose the best legal move, by comparing the Q values
+        # np.max(..., axis=1)
+
+        # Q-learning update rule:
+        # Q-target = reward + γ × max Q(next state, next action)
+        # discounted_reward = r + best_future_value * gamma * (1 - done)
+
         discounted_reward = r + (
             self._gamma * np.max(np.where(legal_moves == 1, next_model_outputs, -np.inf), axis=1).reshape(-1, 1)
         ) * (1 - done)
+
+        # We use the discounted_reward to correct the target value for the action that was actually taken
+        # while keeping the other actions' target values the same as the model's predictions.
+        # This way, we only update the Q-value for the action that was taken, which is the essence of Q-learning.
+
         # create the target variable, only the column with action has different value
         target = self._get_model_outputs(s)
+
         # we bother only with the difference in reward estimate at the selected action
+        # Example:
+        # [1, 1, 0, 1] × [0.2, 0.8, 0.4, -0.1] + [0, 0, 1, 0] × 2.98
+        # Thats will only update the 3rd action's value to 2.98, while keeping the other actions' values the same
         target = (1 - a) * target + a * discounted_reward
+
+        # convert to torch tensor for training
         target = torch.as_tensor(target, dtype=torch.float32, device=self._device)
+
         # one step of gradient descent (equivalent of keras train_on_batch)
         self._model.train()
+
+        # Clear gradients left from the previous training step.
         self._optimizer.zero_grad()
+
+        # measure mistake by calculating how wrong are the CNNs Q value predictions overall
         loss = mean_huber_loss(target, self._model(self._prepare_input(s)))
+
+        # calculates how each CNN weight contributed to that loss
         loss.backward()
+        # applies the weight corrections
         self._optimizer.step()
+        # return the loss value as a float, not a tensor
         return loss.item()
 
     def update_target_net(self):
