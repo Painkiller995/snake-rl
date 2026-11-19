@@ -15,6 +15,10 @@ from replay_buffer import ReplayBufferNumpy
 
 def huber_loss(y_true, y_pred, delta=1):
     """PyTorch implementation for huber loss
+
+    Small prediction mistake → squared penalty, fine correction
+    Large prediction mistake → linear penalty, stable correction
+
     loss = {
         0.5 * (y_true - y_pred)**2 if abs(y_true - y_pred) < delta
         delta * (abs(y_true - y_pred) - 0.5 * delta) otherwise
