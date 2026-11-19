@@ -24,30 +24,32 @@ class DQNModel(nn.Module):
     def __init__(self, board_size=10, frames=2, n_actions=4):
         super().__init__()
 
-        # Input: 2 frames, Output: 16 feature maps.
-        # 3x3 filters scan the board
-        # padding keeps its size at 10x10.
+        # Input: 2 frames, output: 16 feature maps.
+        # Output size = ((input + 2 * padding - kernel) / stride) + 1.
+        # conv1: ((10 + 2 * 1 - 3) / 1) + 1 = 10.
         self.conv1 = nn.Conv2d(frames, 16, kernel_size=3, padding=1)
 
-        # Input: 16 maps, Output: 32 maps.
+        # Input: 16 feature maps, output: 32 feature maps.
         # 3x3 filters detect patterns from the previous layer.
-        # board shrinks from 10x10 to 8x8.
+        # Output size = ((input + 2 * padding - kernel) / stride) + 1.
+        # conv2: ((10 + 2 * 0 - 3) / 1) + 1 = 8.
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3)
 
-        # Input: 32 maps, Output: 64 maps.
+        # Input: 32 feature maps, output: 64 feature maps.
         # 5x5 filters detect larger patterns.
-        # board shrinks from 8x8 to 4x4.
+        # Output size = ((input + 2 * padding - kernel) / stride) + 1.
+        # conv3: ((8 + 2 * 0 - 5) / 1) + 1 = 4.
         self.conv3 = nn.Conv2d(32, 64, kernel_size=5)
 
-        # conv1: 3x3 kernel + padding=1 → reduces size by 0
-        # conv2: 3x3 kernel, no padding → reduces size by 2
-        # conv3: 5x5 kernel, no padding → reduces size by 4
-        # Total reduction: 0 + 2 + 4 = 6 (10x10 → 4x4)
+        # conv1 reduces each spatial dimension by 0 (10x10 -> 10x10).
+        # conv2 reduces each spatial dimension by 2 (10x10 -> 8x8).
+        # conv3 reduces each spatial dimension by 4 (8x8 -> 4x4).
+        # Total reduction: 0 + 2 + 4 = 6, so size = board_size - 6.
         size = board_size - 6
 
-        # conv3 outputs 64 feature maps, each 4x4 (size = 4).
+        # With the default 10x10 board, conv3 outputs 64 feature maps of size 4x4.
         # Flatten turns them into 64 * 4 * 4 = 1024 input features.
-        # Fully connected layer: 1024 inputs → 64 output neurons.
+        # Fully connected layer: 1024 inputs -> 64 output neurons.
         # Each neuron learns to combine information from all 1024 inputs.
         self.fc1 = nn.Linear(64 * size * size, 64)
 
