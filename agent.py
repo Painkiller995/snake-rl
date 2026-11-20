@@ -581,7 +581,8 @@ class DeepQLearningAgent(Agent):
         # while keeping the other actions' target values the same as the model's predictions.
         # This way, we only update the Q-value for the action that was taken, which is the essence of Q-learning.
 
-        # create the target variable, only the column with action has different value
+        # Get the one-hot encoding of the actions taken
+        # This is the Q-value for each action in the current state
         target = self._get_model_outputs(s)
 
         # we bother only with the difference in reward estimate at the selected action
